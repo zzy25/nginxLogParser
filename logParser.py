@@ -1,34 +1,41 @@
 import re
-import itertools
-import operator
+from operator import itemgetter
+from collections import OrderedDict
 
 filename = "example"
 logFile = open(filename)
 data = logFile.read()
 
-
+# Get all Ips that accessed the page
 def getIpAddress():
     return re.findall( r'[0-9]+(?:\.[0-9]+){3}', data)
 
+# Get all unique ips
 def getUniqIpAddress():
     unique = getIpAddress()
     return list(set(unique))
 
+# Get all 40x codes
 def getMissedUrls():
     return re.findall( r'(\"GET\ [\\\/\\\ \w\.]+\"\ 40[0-9])', data)
 
+# Get all 20x codes
 def getCoolUrls():
     return re.findall( r'(\"GET\ [\\\/\\\ \w\.]+\"\ 20[0-9])', data)
 
+# Get all 50x codes
 def getServerErrosUrls():
     return re.findall( r'(\"GET\ [\\\/\\\ \w\.]+\"\ 50[0-9])', data)
 
+# Get all 30x codes
 def getRedirectsUrls():
     return re.findall( r'(\"GET\ [\\\/\\\ \w\.]+\"\ 30[0-9])', data)
 
+# Get all Codes
 def getAllErrorsCode():
     return re.findall( r'(\"GET\ [\\\/\\\ \w\.]+\"\ [0-9]{3})', data)
 
+# Get all code errors
 def getErrorsCode():
 	listAllErros = getAllErrorsCode()
 	e400 = []
@@ -41,30 +48,20 @@ def getErrorsCode():
 
 	return [e400,e500]
 
+# Get all accessed urls
 def getAccessedUrl():
 	return re.findall(r'http://[\w\:\/\.]+', data)
 
-def getMostAccessedUrl(L):
-    # get an iterable of (item, iterable) pairs
-    SL = sorted((x, i) for i, x in enumerate(L))
-    # print 'SL:', SL
-    groups = itertools.groupby(SL, key=operator.itemgetter(0))
-    # auxiliary function to get "quality" for an item
-    def _auxfun(g):
-        item, iterable = g
-        count = 0
-        min_index = len(L)
-        for _, where in iterable:
-            count += 1
-            min_index = min(min_index, where)
-        # print 'item %r, count %r, minind %r' % (item, count, min_index)
-        return count, -min_index
-    # pick the highest-count/earliest item
-    def f7(seq):
-        seen = set()
-        seen_add = seen.add
-        return [ x for x in seq if not (x in seen or seen_add(x))]
-    return f7(max(groups, key=_auxfun)[0])
+# Return URL and its hits (order by hits)
+def getNumberAccessedUrl():
+    allUrls = getAccessedUrl()
+    mostAccess = {}
+    for a in allUrls:
+        if mostAccess.has_key(a):
+            mostAccess[a] += 1
+        else:
+            mostAccess[a] = 1
+    return OrderedDict(sorted(mostAccess.items(), key=itemgetter(1), reverse=True))
 
 def getNumberOfError(errorCode):
     listAllErrors = getAllErrorsCode()
@@ -72,11 +69,32 @@ def getNumberOfError(errorCode):
     for a in listAllErrors:
         if bool(re.search(r'%s' % errorCode, a)):
             errors.append(re.findall(r'errorCode', a))
-
     return len(errors)
 
+# Get hour access
+def getHourAccess():
+    return re.findall(r'[0-9]{2}/[a-zA-z]{3}/[0-9]{4}\:[0-9]{2}', data)
 
-b = getAccessedUrl();
-c = getMostAccessedUrl(b)
-print (b)
+# Get number off access by hour
+def getNumberOfHourAccess():
+    allHours = getHourAccess()
+    mostAccess = {}
+    for a in allHours:
+        if mostAccess.has_key(a[-2:]):
+            mostAccess[a[-2:]] = +1
+        else:
+            mostAccess[a[-2:]] = 1
+    return sorted(mostAccess)
+
+# Get url peer httpCode
+def getUrlPeerCode(code):
+    urlsAndCodesAndGarbage = re.findall(r'GET\ [/\w\.]+\ HTTP\/1\.1\"\ %s[0-9]{2}\ [0-9]+\ "[\w\:\\./]+"' % code, data)
+    codesAndUrl = {}
+    for a in urlsAndCodesAndGarbage:
+        codesAndUrl[re.findall(r'http://[\w\:\/\.]+', a)[0]] = (re.findall(r'"\ [0-9]{3}', a))[0][2:], re.findall(r'GET\ /[\w/\-\.\ ]+', a)[0]
+    return codesAndUrl
+
+
+
+
 
