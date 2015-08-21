@@ -10,13 +10,13 @@ class getLogInformation:
         self.data = logFile.read()
 
     # Get all Ips that accessed the page
-    def getIpAddress():
+    def getIpAddress(self):
         return re.findall(r'[0-9]+(?:\.[0-9]+){3}', self.data)
 
 
     # Get all unique ips
     def getUniqIpAddress(self):
-        unique = getIpAddress()
+        unique = self.getIpAddress()
         return list(set(unique))
 
 
@@ -80,7 +80,7 @@ class getLogInformation:
         listAllErrors = self.getAllErrorsCode()
         errors = []
         for a in listAllErrors:
-            if bool(re.search(r'%s' % errorCode, a)):
+            if bool(re.search(r'%s[0-9]{2}' % errorCode, a)):
                 errors.append(re.findall(r'errorCode', a))
         return len(errors)
 
@@ -96,10 +96,10 @@ class getLogInformation:
         mostAccess = {}
         for a in allHours:
             if mostAccess.has_key(a[-2:]):
-                mostAccess[a[-2:]] = +1
+                mostAccess[a[-2:]] += 1
             else:
                 mostAccess[a[-2:]] = 1
-        return sorted(mostAccess)
+        return OrderedDict(sorted(mostAccess.items(), key=itemgetter(0), reverse=False))
 
 
     # Get url peer httpCode
